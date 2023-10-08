@@ -1,0 +1,27 @@
+{
+    "verison": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "zig",
+            "args": [
+                "build",
+                "run"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "test",
+            "type": "shell",
+            "command": "zig",
+            "args": [
+                "build",
+                "test"
+            ],
+        },
+    ]
+}
