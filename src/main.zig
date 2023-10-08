@@ -21,7 +21,14 @@ pub fn main() !void {
     defer glfw.terminate();
 
     // Create our window
-    const window = glfw.Window.create(640, 480, "Horizon", null, null, .{}) orelse {
+    const window = glfw.Window.create(
+        640,
+        480,
+        "Horizon",
+        null,
+        null,
+        .{},
+    ) orelse {
         std.log.err("failed to create GLFW window: {?s}", .{glfw.getErrorString()});
         std.process.exit(1);
     };
@@ -32,12 +39,45 @@ pub fn main() !void {
     const proc: glfw.GLProc = undefined;
     try gl.load(proc, glGetProcAddress);
 
+    const vertices = [_]f32{
+        -0.5, -0.5, 0,
+        0.5,  -0.5, 0,
+        0,    0.5,  0,
+    };
+
+    var vao: u32 = undefined;
+    gl.genVertexArrays(1, &vao);
+
+    var vbo: u32 = undefined;
+    gl.genBuffers(1, &vbo);
+
+    gl.bindVertexArray(vao);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices.len * @sizeOf(f32), vertices[0..].ptr, gl.STATIC_DRAW);
+
+    gl.vertexAttribPointer(
+        0,
+        3,
+        gl.FLOAT,
+        gl.FALSE,
+        3 * @sizeOf(f32),
+        null,
+    );
+    gl.enableVertexAttribArray(0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, 0);
+    gl.bindVertexArray(0);
+
     // Wait for the user to close the window.
     while (!window.shouldClose()) {
         window.swapBuffers();
 
         gl.clearColor(1, 0, 0, 0);
         gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.bindVertexArray(vao);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
 
         glfw.pollEvents();
     }
