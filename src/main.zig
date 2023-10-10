@@ -79,18 +79,18 @@ const Mesh = struct {
 const Shader = struct {
     program: u32 = 0,
 
+    vertSource: []const u8,
+    fragSource: []const u8,
+
     const Self = @This();
 
     fn compile(self: *Self) void {
-        const vertShaderSource: []const u8 = @embedFile("vert.glsl");
-        const fragShaderSource: []const u8 = @embedFile("frag.glsl");
-
         const vertShader = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(vertShader, 1, &vertShaderSource.ptr, null);
+        gl.shaderSource(vertShader, 1, &self.vertSource.ptr, null);
         gl.compileShader(vertShader);
 
         const fragShader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(fragShader, 1, &fragShaderSource.ptr, null);
+        gl.shaderSource(fragShader, 1, &self.fragSource.ptr, null);
         gl.compileShader(fragShader);
 
         self.program = gl.createProgram();
@@ -166,7 +166,10 @@ pub fn main() !void {
     mesh.create();
 
     // Shader
-    var shader = Shader{};
+    var shader = Shader{
+        .vertSource = @embedFile("vert.glsl"),
+        .fragSource = @embedFile("frag.glsl"),
+    };
     shader.compile();
     defer shader.deinit();
 
