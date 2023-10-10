@@ -27,7 +27,7 @@ pub fn main() !void {
         "Horizon",
         null,
         null,
-        .{},
+        .{ .context_version_major = 3, .context_version_minor = 3, .opengl_forward_compat = true, .opengl_profile = glfw.Window.Hints.OpenGLProfile.opengl_core_profile },
     ) orelse {
         std.log.err("failed to create GLFW window: {?s}", .{glfw.getErrorString()});
         std.process.exit(1);
@@ -69,12 +69,33 @@ pub fn main() !void {
     gl.bindBuffer(gl.ARRAY_BUFFER, 0);
     gl.bindVertexArray(0);
 
+    // Shader
+    const vertShaderSource: []const u8 = @embedFile("vert.glsl");
+    const vertShader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertShader, 1, &vertShaderSource.ptr, null);
+    gl.compileShader(vertShader);
+
+    const fragShaderSource: []const u8 = @embedFile("frag.glsl");
+    const fragShader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fragShader, 1, &fragShaderSource.ptr, null);
+    gl.compileShader(fragShader);
+
+    var shader = gl.createProgram();
+    gl.attachShader(shader, vertShader);
+    gl.attachShader(shader, fragShader);
+    gl.linkProgram(shader);
+
+    gl.deleteShader(vertShader);
+    gl.deleteShader(fragShader);
+
     // Wait for the user to close the window.
     while (!window.shouldClose()) {
         window.swapBuffers();
 
-        gl.clearColor(1, 0, 0, 0);
+        gl.clearColor(1, 0, 0, 1);
         gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.useProgram(shader);
 
         gl.bindVertexArray(vao);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
