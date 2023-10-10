@@ -12,6 +12,64 @@ fn errorCallback(error_code: glfw.ErrorCode, description: [:0]const u8) void {
     std.log.err("glfw: {}: {s}\n", .{ error_code, description });
 }
 
+const Mesh = struct {
+    vertices: [32]f32 = [1]f32{32} ** 32,
+    indices: [32]u32 = [1]u32{32} ** 32,
+
+    vertexCount: i32 = 0,
+    indexCount: i32 = 0,
+
+    vao: u32 = undefined,
+    vbo: u32 = undefined,
+    ibo: u32 = undefined,
+
+    const Self = @This();
+
+    fn create(self: *Self) void {
+        gl.genVertexArrays(1, &self.vao);
+        gl.genBuffers(1, &self.vbo);
+        gl.genBuffers(1, &self.ibo);
+
+        gl.bindVertexArray(self.vao);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, self.vbo);
+        gl.bufferData(
+            gl.ARRAY_BUFFER,
+            self.vertexCount * @sizeOf(f32),
+            self.vertices[0..].ptr,
+            gl.STATIC_DRAW,
+        );
+
+        gl.vertexAttribPointer(
+            0,
+            3,
+            gl.FLOAT,
+            gl.FALSE,
+            3 * @sizeOf(f32),
+            null,
+        );
+        gl.enableVertexAttribArray(0);
+
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, self.ibo);
+        gl.bufferData(
+            gl.ELEMENT_ARRAY_BUFFER,
+            self.indexCount * @sizeOf(u32),
+            self.indices[0..].ptr,
+            gl.STATIC_DRAW,
+        );
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, 0);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0);
+        gl.bindVertexArray(0);
+    }
+
+    fn bind(self: Self) void {
+        gl.bindVertexArray(self.vao);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, self.ibo);
+        gl.drawElements(gl.TRIANGLES, self.indexCount, gl.UNSIGNED_INT, null);
+    }
+};
+
 pub fn main() !void {
     glfw.setErrorCallback(errorCallback);
     if (!glfw.init(.{})) {
@@ -27,7 +85,12 @@ pub fn main() !void {
         "Horizon",
         null,
         null,
-        .{ .context_version_major = 3, .context_version_minor = 3, .opengl_forward_compat = true, .opengl_profile = glfw.Window.Hints.OpenGLProfile.opengl_core_profile },
+        .{
+            .context_version_major = 3,
+            .context_version_minor = 3,
+            .opengl_forward_compat = true,
+            .opengl_profile = glfw.Window.Hints.OpenGLProfile.opengl_core_profile,
+        },
     ) orelse {
         std.log.err("failed to create GLFW window: {?s}", .{glfw.getErrorString()});
         std.process.exit(1);
@@ -51,38 +114,14 @@ pub fn main() !void {
         0, 1, 2,
     };
 
-    // VAO, VBO, IBO
+    var mesh = Mesh{};
+    @memcpy(mesh.vertices[0..vertices.len], vertices[0..]);
+    mesh.vertexCount = vertices.len;
 
-    var vao: u32 = undefined;
-    gl.genVertexArrays(1, &vao);
+    @memcpy(mesh.indices[0..indices.len], indices[0..]);
+    mesh.indexCount = indices.len;
 
-    var vbo: u32 = undefined;
-    gl.genBuffers(1, &vbo);
-
-    var ibo: u32 = undefined;
-    gl.genBuffers(1, &ibo);
-
-    gl.bindVertexArray(vao);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-    gl.bufferData(gl.ARRAY_BUFFER, vertices.len * @sizeOf(f32), vertices[0..].ptr, gl.STATIC_DRAW);
-
-    gl.vertexAttribPointer(
-        0,
-        3,
-        gl.FLOAT,
-        gl.FALSE,
-        3 * @sizeOf(f32),
-        null,
-    );
-    gl.enableVertexAttribArray(0);
-
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices.len * @sizeOf(u32), indices[0..], gl.STATIC_DRAW);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, 0);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0);
-    gl.bindVertexArray(0);
+    mesh.create();
 
     // Shader
     const vertShaderSource: []const u8 = @embedFile("vert.glsl");
@@ -112,9 +151,7 @@ pub fn main() !void {
 
         gl.useProgram(shader);
 
-        gl.bindVertexArray(vao);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
-        gl.drawElements(gl.TRIANGLES, indices.len, gl.UNSIGNED_INT, null);
+        mesh.bind();
 
         glfw.pollEvents();
     }
