@@ -7,5 +7,9 @@
             .url = "https://pkg.machengine.org/mach-glfw/076b3869cbfd2ccccb6a8c01e4128bb0d7977ebb.tar.gz",
             .hash = "1220cafbb90ea86d92c07f779e8106e6f5c3d8ab4cc68ddc8d3f80bd4b6079064135",
         },
+        .mach = .{
+            .url = "https://pkg.machengine.org/mach/b6e0539c523bd9f9581ba8728a6fc4145f3f29f7.tar.gz",
+            .hash = "122087d8b4ee753f1dd0aca1cb37be583c31889af8809cd346ca3aa11219798391e4",
+        },
     },
 }
