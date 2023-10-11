@@ -1,7 +1,74 @@
 const std = @import("std");
 const gl = @import("gl");
+const glfw = @import("mach-glfw");
 
 const Allocator = std.mem.Allocator;
+
+pub const Engine = struct {
+    window: ?glfw.Window = null,
+
+    const Self = @This();
+
+    fn glGetProcAddress(p: glfw.GLProc, proc: [:0]const u8) ?gl.FunctionPointer {
+        _ = p;
+        return glfw.getProcAddress(proc);
+    }
+
+    fn errorCallback(error_code: glfw.ErrorCode, description: [:0]const u8) void {
+        std.log.err("glfw: {}: {s}\n", .{ error_code, description });
+    }
+
+    pub fn init(self: *Self) !void {
+        glfw.setErrorCallback(errorCallback);
+
+        if (!glfw.init(.{})) {
+            std.log.err("failed to initialize GLFW: {?s}", .{glfw.getErrorString()});
+            std.process.exit(1);
+        }
+
+        // Create our window
+        self.window = glfw.Window.create(
+            640,
+            480,
+            "Horizon",
+            null,
+            null,
+            .{
+                .context_version_major = 3,
+                .context_version_minor = 3,
+                .opengl_forward_compat = true,
+                .opengl_profile = glfw.Window.Hints.OpenGLProfile.opengl_core_profile,
+            },
+        ) orelse {
+            std.log.err("failed to create GLFW window: {?s}", .{glfw.getErrorString()});
+            std.process.exit(1);
+        };
+
+        glfw.makeContextCurrent(self.window);
+
+        const proc: glfw.GLProc = undefined;
+        try gl.load(proc, glGetProcAddress);
+    }
+
+    pub fn deinit(self: *Self) void {
+        if (self.window) |window| {
+            window.destroy();
+        }
+
+        glfw.terminate();
+    }
+
+    pub fn isRunning(self: *Self) bool {
+        self.window.?.swapBuffers();
+
+        glfw.pollEvents();
+
+        gl.clearColor(1, 0, 0, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        return !self.window.?.shouldClose();
+    }
+};
 
 pub const Mesh = struct {
     vertices: std.ArrayList(f32),
@@ -92,7 +159,7 @@ pub const Shader = struct {
         gl.shaderSource(vertShader, 1, &self.vertSource.ptr, null);
         gl.compileShader(vertShader);
 
-        Shader.verifyShaderCompilation(vertShader, "vertex");
+        verifyShaderCompilation(vertShader, "vertex");
 
         const fragShader = gl.createShader(gl.FRAGMENT_SHADER);
         defer gl.deleteShader(fragShader);
@@ -100,14 +167,14 @@ pub const Shader = struct {
         gl.shaderSource(fragShader, 1, &self.fragSource.ptr, null);
         gl.compileShader(fragShader);
 
-        Shader.verifyShaderCompilation(fragShader, "fragment");
+        verifyShaderCompilation(fragShader, "fragment");
 
         self.program = gl.createProgram();
         gl.attachShader(self.program, vertShader);
         gl.attachShader(self.program, fragShader);
         gl.linkProgram(self.program);
 
-        Shader.verifyProgramCompilation(self.program);
+        verifyProgramCompilation(self.program);
     }
 
     pub fn bind(self: Self) void {
