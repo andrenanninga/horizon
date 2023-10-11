@@ -73,6 +73,43 @@ pub fn main() !void {
     mesh.create();
     defer mesh.deinit();
 
+    var mesh2 = Mesh.init(alloc);
+
+    try mesh2.vertices.appendSlice(&.{
+        0, 0, 0,
+        1, 0, 0,
+        0, 1, 0,
+        1, 1, 0,
+        0, 0, 1,
+        1, 0, 1,
+        0, 1, 1,
+        1, 1, 1,
+    });
+
+    try mesh2.indices.appendSlice(&.{
+        // front
+        0, 1, 2,
+        2, 3, 0,
+        // right
+        1, 5, 6,
+        6, 2, 1,
+        // back
+        7, 6, 5,
+        5, 4, 7,
+        // left
+        4, 0, 3,
+        3, 7, 4,
+        // top
+        4, 5, 1,
+        1, 0, 4,
+        // bottom
+        3, 2, 6,
+        6, 7, 3,
+    });
+
+    mesh2.create();
+    defer mesh2.deinit();
+
     // Shader
     var shader = Shader{
         .vertSource = @embedFile("vert.glsl"),
@@ -91,6 +128,7 @@ pub fn main() !void {
         shader.bind();
 
         mesh.bind();
+        mesh2.bind();
 
         glfw.pollEvents();
     }
