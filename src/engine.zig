@@ -1,17 +1,24 @@
+const std = @import("std");
 const gl = @import("gl");
 
-pub const Mesh = struct {
-    vertices: [32]f32 = [1]f32{32} ** 32,
-    indices: [32]u32 = [1]u32{32} ** 32,
+const Allocator = std.mem.Allocator;
 
-    vertexCount: i32 = 0,
-    indexCount: i32 = 0,
+pub const Mesh = struct {
+    vertices: std.ArrayList(f32),
+    indices: std.ArrayList(u32),
 
     vao: u32 = undefined,
     vbo: u32 = undefined,
     ebo: u32 = undefined,
 
     const Self = @This();
+
+    pub fn init(allocator: Allocator) Mesh {
+        return .{
+            .vertices = std.ArrayList(f32).init(allocator),
+            .indices = std.ArrayList(u32).init(allocator),
+        };
+    }
 
     pub fn create(self: *Self) void {
         gl.genVertexArrays(1, &self.vao);
@@ -23,16 +30,16 @@ pub const Mesh = struct {
         gl.bindBuffer(gl.ARRAY_BUFFER, self.vbo);
         gl.bufferData(
             gl.ARRAY_BUFFER,
-            self.vertexCount * @sizeOf(f32),
-            self.vertices[0..].ptr,
+            @intCast(self.vertices.items.len * @sizeOf(f32)),
+            self.vertices.items[0..].ptr,
             gl.STATIC_DRAW,
         );
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, self.ebo);
         gl.bufferData(
             gl.ELEMENT_ARRAY_BUFFER,
-            self.indexCount * @sizeOf(u32),
-            self.indices[0..].ptr,
+            @intCast(self.indices.items.len * @sizeOf(u32)),
+            self.indices.items[0..].ptr,
             gl.STATIC_DRAW,
         );
 
@@ -54,7 +61,7 @@ pub const Mesh = struct {
     pub fn bind(self: Self) void {
         gl.bindVertexArray(self.vao);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, self.ebo);
-        gl.drawElements(gl.TRIANGLES, self.indexCount, gl.UNSIGNED_INT, null);
+        gl.drawElements(gl.TRIANGLES, @intCast(self.indices.items.len), gl.UNSIGNED_INT, null);
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0);
         gl.bindVertexArray(0);
@@ -64,6 +71,9 @@ pub const Mesh = struct {
         gl.deleteVertexArrays(1, &self.vao);
         gl.deleteBuffers(1, &self.vbo);
         gl.deleteBuffers(1, &self.ebo);
+
+        self.vertices.deinit();
+        self.indices.deinit();
     }
 };
 
@@ -82,7 +92,7 @@ pub const Shader = struct {
         gl.shaderSource(vertShader, 1, &self.vertSource.ptr, null);
         gl.compileShader(vertShader);
 
-        self.verifyShaderCompilation(vertShader, "vertex");
+        Shader.verifyShaderCompilation(vertShader, "vertex");
 
         const fragShader = gl.createShader(gl.FRAGMENT_SHADER);
         defer gl.deleteShader(fragShader);
@@ -90,14 +100,14 @@ pub const Shader = struct {
         gl.shaderSource(fragShader, 1, &self.fragSource.ptr, null);
         gl.compileShader(fragShader);
 
-        self.verifyShaderCompilation(fragShader, "fragment");
+        Shader.verifyShaderCompilation(fragShader, "fragment");
 
         self.program = gl.createProgram();
         gl.attachShader(self.program, vertShader);
         gl.attachShader(self.program, fragShader);
         gl.linkProgram(self.program);
 
-        self.verifyProgramCompilation(self.program);
+        Shader.verifyProgramCompilation(self.program);
     }
 
     pub fn bind(self: Self) void {
@@ -108,8 +118,7 @@ pub const Shader = struct {
         gl.deleteProgram(self.program);
     }
 
-    fn verifyShaderCompilation(self: *Self, shader: gl.GLuint, name: []const u8) void {
-        _ = self;
+    fn verifyShaderCompilation(shader: gl.GLuint, name: []const u8) void {
         var success: gl.GLint = undefined;
         gl.getShaderiv(shader, gl.COMPILE_STATUS, &success);
 
@@ -122,8 +131,7 @@ pub const Shader = struct {
         }
     }
 
-    fn verifyProgramCompilation(self: *Self, program: u32) void {
-        _ = self;
+    fn verifyProgramCompilation(program: u32) void {
         var success: gl.GLint = undefined;
 
         gl.getProgramiv(program, gl.LINK_STATUS, &success);
