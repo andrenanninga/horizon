@@ -1,11 +1,13 @@
 const std = @import("std");
 const gl = @import("gl");
 const glfw = @import("mach-glfw");
+const math = @import("mach").math;
 
 const Allocator = std.mem.Allocator;
 
 pub const Engine = struct {
     window: ?glfw.Window = null,
+    camera: Camera = .{},
 
     const Self = @This();
 
@@ -68,6 +70,10 @@ pub const Engine = struct {
 
         return !self.window.?.shouldClose();
     }
+};
+
+pub const Camera = struct {
+    projectionMatrix: math.Mat4x4 = math.Mat4x4.ident,
 };
 
 pub const Mesh = struct {
@@ -177,12 +183,25 @@ pub const Shader = struct {
         verifyProgramCompilation(self.program);
     }
 
-    pub fn bind(self: Self) void {
+    pub fn bind(self: *Self) void {
         gl.useProgram(self.program);
     }
 
-    pub fn deinit(self: Self) void {
+    pub fn deinit(self: *Self) void {
         gl.deleteProgram(self.program);
+    }
+
+    pub fn setVec3(uniformLocation: i32, vec: math.Vec3) void {
+        gl.uniform3fv(uniformLocation, 1, &vec.v[0]);
+    }
+
+    pub fn setMatrix(uniformLocation: i32, matrix: math.Mat4x4) void {
+        gl.uniformMatrix4fv(
+            uniformLocation,
+            1,
+            gl.FALSE,
+            &matrix.v[0].v[0],
+        );
     }
 
     fn verifyShaderCompilation(shader: gl.GLuint, name: []const u8) void {
